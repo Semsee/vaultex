@@ -11,6 +11,15 @@ This is **fork** from the original vaultex library at
 [findmypast/vaultex](https://github.com/findmypast/vaultex), which appears to be abandoned
 by the author at this time.
 
+## Differences
+
+* Uses latest version of mix packages for dependencies
+* Replaced Poison with Jason for JSON encoding and decoding
+* Replaced HTTPoison with Req for HTTP requests
+* Fixes critical bugs in AWS IAM authentication
+* Adds ability to handle wrapped secrets for approle secret_ids
+* Adds ability to automatically renew a token's lease if it is marked as renewable
+
 ## Installation
 
 The package can be installed as:
@@ -74,6 +83,7 @@ Authenticate to different authentication backends.
 
 ```elixir
 iex> Vaultex.Client.auth(:app_id, {app_id, user_id})
+iex> Vaultex.Client.auth(:app_id, {app_id, %{wrapped: wrapping_token}})
 iex> Vaultex.Client.auth(:userpass, {username, password})
 iex> Vaultex.Client.auth(:ldap, {username, password})
 iex> Vaultex.Client.auth(:github, {github_token})

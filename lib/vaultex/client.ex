@@ -20,17 +20,40 @@ defmodule Vaultex.Client do
   end
 
   @doc """
-  Authenticates with vault using a tuple. This can be executed before attempting to read secrets from vault.
+  Authenticates with vault using a tuple.
+
+  The token obtained from the authN flow is kept in the GenServer state and re-used;
+  if subsequent read/3 calls ever fail, we try to re-authN via the supplied credentials.
+
+  This should be executed before attempting to read secrets if your token expires
+  (i.e. has a TTL).
+
+  ### Credentials
+  A tuple or map used for authentication, depending on the method:
+
+  * `{role_id, secret_id}` for `:approle`,
+  * `{role_id, %{wrapped: wrapping_token}}` for `:approle` with a wrapped secret id,
+  * `{role, server_id}` for `:aws_iam`,
+  * `{username, password}` for `:userpass`,
+  * `{username, password}` for `:ldap`,
+  * `{github_token}` for `:github`,
+  * `{app_id, user_id}` for `:app_id`,
+  * `{token}` for `:token`, or
+  * json-encodable map for unhandled methods, i.e. `%{jwt: "jwt", role: "role"}` for `:kubernetes`
 
   ## Parameters
 
-    - method: Auth backend to use for authenticating, can be one of `:approle, :app_id, :userpass, :github, :token`
-    - credentials: A tuple or map used for authentication depending on the method, `{role_id, secret_id}` for `:approle`, `{app_id, user_id}` for `:app_id`, `{username, password}` for `:userpass`, `{github_token}` for `:github`, `{token}` for `:token`, or json-encodable map for unhandled methods, i.e. `%{jwt: "jwt", role: "role"}` for `:kubernetes`
-    - timeout: A integer greater than zero which specifies how many milliseconds to wait for a reply
+    - method: Auth backend to use for authenticating;
+      can be one of `:approle, :app_id, :userpass, :github, :token, :aws_iam, :ldap`
+    - credentials: a tuple or map of Credentials, as described above
+    - timeout: how many milliseconds to wait for a reply from the Vault server; defaults to 5_000
 
   ## Examples
 
-      iex> Vaultex.Client.auth(:approle, {role_id, secret_id}, 5000)
+      iex> Vaultex.Client.auth(:approle, {role_id, secret_id}, 5_000)
+      {:ok, :authenticated}
+
+      iex> Vaultex.Client.auth(:approle, {"role-uuid", %{wrapped: "s.1234example"})
       {:ok, :authenticated}
 
       iex> Vaultex.Client.auth(:app_id, {app_id, user_id})
