@@ -278,6 +278,10 @@ defmodule Vaultex.Client do
     Delete.handle(key, state)
   end
 
+  def handle_info(:renew_token, _from, state) do
+    Auth.renew_token(state)
+  end
+
   defp url do
     "#{scheme()}://#{host()}:#{port()}/#{@version}/"
   end
