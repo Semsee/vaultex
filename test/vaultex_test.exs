@@ -11,6 +11,26 @@ defmodule VaultexTest do
       assert Vaultex.Client.auth(:approle, {"bad", "whatever"}) == {:error, ["Not Authenticated"]}
     end
 
+    test "of role_id and wrapped secret is successful" do
+      assert Vaultex.Client.auth(:approle, {"any", %{wrapped: "good"}}) == {:ok, :authenticated}
+    end
+
+    test "of role_id and wrapped secret with renewable token is successful" do
+      assert Vaultex.Client.auth(:approle, {"any", %{wrapped: "good_renewable"}}) ==
+        {:ok, :authenticated}
+    end
+
+    test "of role_id and invalid wrapped secret is unsuccessful" do
+      assert Vaultex.Client.auth(:approle, {"any", %{wrapped: "bad"}}) ==
+        {
+          :error,
+          [
+            "Unexpected response from [http://localhost:8200/v1/]",
+            "wrapping token is not valid or does not exist"
+          ]
+        }
+    end
+
     test "of app_id and user_id is successful" do
       assert Vaultex.Client.auth(:app_id, {"good", "whatever"}) == {:ok, :authenticated}
     end
@@ -346,6 +366,34 @@ defmodule Vaultex.VaultStub do
     case test_key do
       ["renew"] ->
         Req.Test.json(conn, %{lease_id: lease_id, lease_duration: 160, renewable: true})
+    end
+  end
+
+  def call(%{path_info: ["v1", "sys", "wrapping", "unwrap"], method: "PUT"} = conn, _params) do
+    {:ok, body, conn} = Conn.read_body(conn)
+
+    token =
+      case Conn.get_req_header(conn, "x-vault-token") do
+        [] -> body
+        [dummy_token] -> dummy_token
+        _ -> ""
+      end
+
+    cond do
+      String.contains?(token, "good") ->
+        Req.Test.json(conn, %{"data" => %{"secret_id" => "s.good"}})
+
+      String.contains?(token, "good_renewable") ->
+        Req.Test.json(conn, %{data: %{secret_id: "s.good", renewable: true, lease_duration: 5}})
+
+      String.contains?(token, "bad") ->
+        Req.Test.json(conn, %{"errors" => ["wrapping token is not valid or does not exist"]})
+
+      String.contains?(token, "boom") ->
+        Req.Test.transport_error(conn, :econnrefused)
+
+      true ->
+        Req.Test.json(conn, %{errors: ["Not Authenticated"]})
     end
   end
 
