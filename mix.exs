@@ -41,7 +41,7 @@ defmodule Vaultex.Mixfile do
       {:excoveralls, "~> 0.10", only: :test},
       {:jason, "~> 1.4"},
       {:plug, "~> 1.0", only: :test},
-      {:req, "~> 0.5.0"}
+      {:req, "~> 0.5"}
     ]
   end
 
